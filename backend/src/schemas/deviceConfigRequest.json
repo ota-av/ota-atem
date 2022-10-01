@@ -1,0 +1,26 @@
+{
+    "title": "DeviceConfigRequest",
+    "type": "object",
+    "properties": {
+        "deviceId": {
+            "type": "string"
+        },
+        "config": {
+            "type": "object",
+            "properties": {
+                "deviceChannel": {
+                    "type": "number"
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "deviceChannel"
+            ]
+        }
+    },
+    "additionalProperties": false,
+    "required": [
+        "deviceId",
+        "config"
+    ]
+}

@@ -38,7 +38,10 @@ const Welcome = ({ onSubmit, initialValues }) => {
                             type={field.type}
                             onChange={event => {
                                 setFormState(prevState => {
-                                    return { ...prevState, [field.technicalLabel]: event.target.value };
+                                    return {
+                                        ...prevState,
+                                        [field.technicalLabel]: event.target.value,
+                                    };
                                 });
                             }}
                         />

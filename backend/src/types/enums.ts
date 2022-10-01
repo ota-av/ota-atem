@@ -18,3 +18,13 @@ export enum AtemEvent {
     error = "error",
     info = "info",
 }
+
+export enum CommType {
+    web = "web",
+    device = "device",
+}
+
+export enum ControlActions {
+    getConfig = "getConfig",
+    setConfig = "setConfig",
+}

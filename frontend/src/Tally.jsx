@@ -15,7 +15,6 @@ const Tally = ({ state, index, connected }) => {
         color = "#333333";
     }
 
-    console.log(connected);
     return (
         <div style={{ backgroundColor: color }} className={`${styles.parent} ${!connected ? styles.blink : ""}`}>
             <p className={styles.text}>{index}</p>

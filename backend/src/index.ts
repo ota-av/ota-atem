@@ -1,6 +1,6 @@
 import { MediaControlRequest } from "mediaControlRequest";
 import { Atem, AtemState } from "atem-connection";
-import { validateMediaControlRequest, validateMediaPreparationRequest, validateMediaUpdateRequest } from "./validators";
+import { validateMediaControlRequest, validateMediaPreparationRequest, validateMediaUpdateRequest, validateDeviceConfigRequest } from "./validators";
 import config from "../config.json";
 import lowerThirdsTexts from "../lowerthirds.json";
 import express from "express";
@@ -15,6 +15,7 @@ import { AtemEvent } from "enums";
 
 import cors from "cors";
 import path from "path";
+import { DeviceManager } from "./device-manager";
 
 const app = express();
 app.use(bodyParser.json());
@@ -33,8 +34,12 @@ const atemEventDispatcher: AtemEventDispatcher = new AtemEventDispatcher(atemCon
 
 const lowerThirdsManager: LowerThirdsManager = new LowerThirdsManager(lowerThirdsTexts, atemConsole);
 
+const deviceManager: DeviceManager = new DeviceManager();
+
 atemEventDispatcher.addHandlers(getMixEffectHandlers(webSocketServer, lowerThirdsManager));
 atemEventDispatcher.addHandlers(getLowerThirdsHandlers(webSocketServer, lowerThirdsManager));
+
+webSocketServer.addConnectionHandler(deviceManager.newConnectionHandler);
 
 atemConsole.connect(config.atem.ip);
 
@@ -96,6 +101,25 @@ app.post("/updateLowerThirds", async (req, res) => {
     } else {
         res.sendStatus(400);
     }
+});
+
+app.post("/setDeviceConfig", async (req, res) => {
+    console.log(req.body);
+    if (validateDeviceConfigRequest(req.body)) {
+        const r = deviceManager.setConfig(req.body.deviceId, req.body.config);
+        if (r === false) {
+            console.log("Failed to set device config");
+            res.sendStatus(500);
+            return;
+        }
+        res.sendStatus(200);
+    } else {
+        res.sendStatus(400);
+    }
+});
+
+app.get("/devices", async (req, res) => {
+    res.status(200).json(deviceManager.getConfigs());
 });
 
 app.get("/getLowerThirds", async (req, res) => {

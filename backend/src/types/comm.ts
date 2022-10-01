@@ -1,4 +1,4 @@
-import { SubscriptionAction, MessageType, EventType, AtemEvent } from "enums";
+import { SubscriptionAction, MessageType, EventType, AtemEvent, ControlActions } from "enums";
 
 export interface Message {
     type: string;
@@ -26,6 +26,24 @@ export interface MediaStateMessage extends Message {
     type: "media";
     currentIndex: number;
     currentValues: object;
+}
+
+export interface DeviceConfig {
+    deviceChannel: number;
+}
+
+export interface SetConfigMessage extends Message {
+    type: "config";
+    action: "set";
+    device: string;
+    config: DeviceConfig;
+}
+
+export interface GetConfigMessage extends Message {
+    type: "config";
+    action: "get";
+    device: string;
+    config: DeviceConfig;
 }
 
 export type AtemEventHandlers = { [key in keyof typeof AtemEvent]: Function[] };
