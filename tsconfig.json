@@ -11,9 +11,7 @@
         "target": "es2018",
         "baseUrl": ".",
         "paths": {
-            "@backend/": [
-                "./backend/src/*"
-            ],
+            "@backend/": ["./backend/src/*"],
             "*": ["node_modules/*", "src/types/*", "backend/"]
         },
         "typeRoots": ["backend/node_modules/@types", "./backend/src/types"],
@@ -25,6 +23,5 @@
         }
     ],
     "include": ["./backend/**/*"],
-    "exclude": ["node_modules"],
-
+    "exclude": ["node_modules"]
 }
