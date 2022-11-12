@@ -7,11 +7,13 @@ import Media from "./Media";
 import { useCommunication, useQuery } from "./TallyLanding";
 import { useLocation } from "react-router-dom";
 
+const mediaRequestValidator = json => json.type === "media";
+
 const LowerThirds = props => {
     const params = useQuery();
 
     const [serverAddress, setServerAddress] = useState(`${params.get("serverAddress") || window.location.hostname}`);
-    const { connected, state, error } = useCommunication(serverAddress, json => json.type === "media");
+    const { connected, state, error } = useCommunication(serverAddress, mediaRequestValidator);
     console.log(
         `${serverAddress}${params.get("development") && (!process.env.NODE_ENV || process.env.NODE_ENV === "development") ? ":4000" : ""}`,
         connected

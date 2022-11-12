@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 
 import styles from "./App.module.css";
 import Tally from "./Tally.jsx";
@@ -16,13 +16,13 @@ export const useCommunication = (serverIP, validator, params, requestHandler) =>
         console.log(serverIP);
 
         const initializeSocket = () => {
+            let socket = null;
             try {
                 console.log("Creating new socket");
                 const uparams = new URLSearchParams(params).toString();
-                const socket = new WebSocket(`ws://${serverIP}:7634/${uparams.length > 0 ? "?" + uparams : ""}`);
+                socket = new WebSocket(`ws://${serverIP}:7634/${uparams.length > 0 ? "?" + uparams : ""}`);
                 console.log("Created");
                 socket.onmessage = event => {
-                    console.log(event.data);
                     let json;
                     try {
                         json = JSON.parse(event.data);
@@ -44,27 +44,34 @@ export const useCommunication = (serverIP, validator, params, requestHandler) =>
                     }
                 };
                 socket.onerror = e => {
-                    console.log("Socket error!");
+                    console.log("Socket error!", e);
                     // setConnected(false);
                     // setTimeout(initializeSocket, 100);
                 };
                 socket.onclose = () => {
                     console.log("Socket closed!");
                     setConnected(false);
-                    setTimeout(initializeSocket, 100);
+                    setTimeout(initializeSocket, 200);
                 };
                 socket.onopen = () => {
                     console.log("Socket open!");
                     setConnected(true);
                 };
             } catch (err) {
-                console.log("Probably refused connection");
-                setTimeout(initializeSocket, 100);
+                console.log("Probably refused connection", err);
+                setTimeout(initializeSocket, 200);
+            }
+
+            return () => {
+                if (socket) {
+                    console.log('closing socket');
+                    socket.close();
+                }
             }
         };
 
-        initializeSocket();
-    }, [serverIP, validator, requestHandler, params]);
+        return initializeSocket();
+    }, [serverIP, validator, params, requestHandler]);
 
     return { connected, state, error };
 };
@@ -73,23 +80,27 @@ export const useQuery = () => {
     return new URLSearchParams(useLocation().search);
 };
 
+const requestValidator = json => json.type === "config" || json.type === "tally";
+
 const TallyLanding = props => {
     const params = useQuery();
 
     const [serverAddress, setServerAddress] = useState(params.get("serverAddress") || window.location.hostname);
     const [camera, setCamera] = useState(parseInt(params.get("camera")) || 1);
-
-    const [deviceId, setDeviceId] = useState(params.get("deviceId") || Math.random().toString(36).slice(2, 7));
-
+    const [deviceId, setDeviceId] = useState(params.get("deviceId") || (Math.random() + 1).toString(36).substring(7));
     const [settingsOpen, setSettingsOpen] = useState(params.get("settingsOpen") !== "false");
-
     const [mediaOpen, setMediaOpen] = useState(params.get("mediaOpen") === "true");
-
     const [isRemote, setIsRemote] = useState(params.get("isRemote") === "true");
+
+    const [commParams, setCommParams] = useState({});
+
+    useEffect(()=>{
+        setCommParams({ ...(isRemote && { deviceId }) });
+    }, [isRemote, deviceId])
 
     const [state, setState] = useState({});
 
-    const requestHandler = json => {
+    const requestHandler = useCallback(json => {
         if (json.type === "tally") {
             setState(json);
         } else if (json.type === "config" && isRemote) {
@@ -97,12 +108,14 @@ const TallyLanding = props => {
                 setCamera(json.config.deviceChannel);
             }
         }
-    };
+    }, [isRemote]);
+
+   
 
     const { connected, _, error } = useCommunication(
         serverAddress,
-        json => json.type === "config" || json.type === "tally",
-        { ...(isRemote && { deviceId }) },
+        requestValidator,
+        commParams,
         requestHandler
     );
 

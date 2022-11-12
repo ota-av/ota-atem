@@ -24,6 +24,7 @@
             "compilerArgs": [
                 "-mcpu=cortex-m0plus",
                 "-mthumb",
+                "-Werror=return-type",
                 "-std=gnu++11",
                 "-ffunction-sections",
                 "-fdata-sections",
