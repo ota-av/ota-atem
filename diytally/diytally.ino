@@ -1,4 +1,5 @@
 #include "defines.h"
+#include "config.h"
 #include <WebSockets2_Generic.h>
 #include <ArduinoJson.h>
 
@@ -7,12 +8,11 @@ using namespace websockets2_generic;
 
 WebsocketsClient client;
 
-const int program_led_pin = 11;
-const int preview_led_pin = 12;
+const int program_led_pin = 12;
+const int preview_led_pin = 11;
+const int status_led_pin = 10;
 
 int cameranum = 1;
-int currentProgram = 0;
-int currentPreview = 0;
 
 enum Ledstate {
   program,
@@ -28,6 +28,7 @@ void onEventsCallback(WebsocketsEvent event, String data)
 	if (event == WebsocketsEvent::ConnectionOpened) 
 	{
 		Serial.println("Connnection Opened");
+		setLedState(off);
 	} 
 	else if (event == WebsocketsEvent::ConnectionClosed) 
 	{
@@ -63,20 +64,33 @@ void onMessagesCallback(WebsocketsMessage message)
 
 	if (json["type"] == "tally")
 	{
-		
+		int prognum = json["program"]["index"];
+    int prevnum = json["preview"]["index"];
+    if(prognum == cameranum) {
+      setLedState(program);
+    }else if(prevnum == cameranum) {
+      setLedState(preview);  
+    }else{
+      setLedState(off);
+    }
 	}
 }
 
 void setup() 
 {
 	// set leds
+  WiFi.setPins(8,7,4,2);
 	pinMode(program_led_pin, OUTPUT);
 	pinMode(preview_led_pin, OUTPUT);
-	setLedState(error);
+	pinMode(status_led_pin, OUTPUT);
 
-	Serial.begin(9600);
+  setLedState(error);
+	
 	while (!Serial && millis() < 5000);
+	Serial.begin(9600);
 
+
+	Serial.println("Test");
 
 
 	Serial.println("\nStarting SAMD_WiFi101-Client with WiFi101 on " + String(BOARD_NAME));
@@ -144,12 +158,13 @@ void setup()
 	// run callback when messages are received
 	client.onMessage([&](WebsocketsMessage message) 
 	{
-	Serial.print("Got Message: ");
-	Serial.println(message.data());
+	  Serial.print("Got Message: ");
+	  Serial.println(message.data());
 	});
 
 	// run callback when events are occuring
 	client.onEvent(onEventsCallback);
+  client.onMessage(onMessagesCallback);
 
 	client.connect(websockets_url);
 }
@@ -165,6 +180,13 @@ void loop()
 
 
 void setLedState(Ledstate ls){
+	if (ls == error){
+		digitalWrite(status_led_pin, LOW);
+	}else{
+		digitalWrite(status_led_pin, HIGH);
+	}
+
+
 	if(ls == program) {
 		digitalWrite(program_led_pin, HIGH);
 		digitalWrite(preview_led_pin, LOW);
@@ -176,8 +198,5 @@ void setLedState(Ledstate ls){
 	{
 		digitalWrite(program_led_pin, LOW);
 		digitalWrite(preview_led_pin, LOW);
-	}else{
-		digitalWrite(program_led_pin, HIGH);
-		digitalWrite(preview_led_pin, HIGH);
 	}
 }

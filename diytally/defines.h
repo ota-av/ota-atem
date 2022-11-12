@@ -148,9 +148,4 @@
 // Debug Level from 0 to 4
 #define _WEBSOCKETS_LOGLEVEL_     3
 
-const char* ssid = "ssid"; //Enter SSID
-const char* password = "password"; //Enter Password
-
-// Change server IP, port and device id here...
-const char* websockets_url = "ws://192.168.2.95:8080/tally?deviceId=diytally_1";
 #endif      //defines_h

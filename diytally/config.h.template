@@ -1,0 +1,5 @@
+const char* ssid = "ssid"; //Enter SSID
+const char* password = "pass"; //Enter Password
+
+// Change server IP, port and device id here...
+const char* websockets_url = "ws://192.168.0.101:7634/tally?deviceId=diytally_3";
