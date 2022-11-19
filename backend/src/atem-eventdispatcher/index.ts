@@ -2,6 +2,9 @@ import { Atem, AtemConnectionStatus, AtemState } from "atem-connection";
 import { AtemEvent } from "../types/enums";
 import { AtemEventHandlers } from "../types/comm";
 
+/**
+ * Handles sending atem events to listeners and registering new handlerse for listeners
+ */
 class AtemEventDispatcher {
     private atemConsole: Atem;
     private handlers: AtemEventHandlers;

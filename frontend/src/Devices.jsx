@@ -24,7 +24,7 @@ const setDeviceConfig = (deviceId, config) => {
 
 const getDevices = () => {
     try {
-        return fetch(`${API_ENDPOINT}/devices`)
+        return fetch(`${API_ENDPOINT}/deviceState`)
             .then(res => {
                 if (res.ok) {
                     return res.json();

@@ -118,7 +118,7 @@ app.post("/setDeviceConfig", async (req, res) => {
     }
 });
 
-app.get("/devices", async (req, res) => {
+app.get("/deviceState", async (req, res) => {
     res.status(200).json(deviceManager.getConfigs());
 });
 
@@ -142,6 +142,7 @@ app.post("/setMediaIndex", async (req, res) => {
 
 export const IS_DEVELOPMENT_ENVIRONMENT = !process.env.NODE_ENV || process.env.NODE_ENV === "development";
 console.log(IS_DEVELOPMENT_ENVIRONMENT);
+// if not dev, mounts also frontend here.
 if (!IS_DEVELOPMENT_ENVIRONMENT) {
     console.log("Mounting front-end");
     console.log(__dirname);

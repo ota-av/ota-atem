@@ -8,10 +8,15 @@ import { LowerThirdsManager } from "../lowerthirds";
 import { MyWebSocketServer } from "../wss";
 import { logger } from "handlebars";
 
+/**
+ * Random helpers for atem
+ */
+
 function timeout(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// get channel state
 function getChannelState(state: AtemState) {
     const mixEffect = state.video.mixEffects[0];
     const inputChannels = state.inputs;
@@ -27,6 +32,7 @@ function getChannelState(state: AtemState) {
     } as ChannelStateMessage;
 }
 
+// formats atem InputChannel as Channel
 function formatAtemInput(atemChannel: InputChannel) {
     return {
         index: atemChannel.inputId,
@@ -35,6 +41,7 @@ function formatAtemInput(atemChannel: InputChannel) {
     } as Channel;
 }
 
+// automatically runs lowerthirds, TODO: does this work??
 async function runLowerThirds(atemConsole: Atem) {
     console.log("Start macro");
     await atemConsole.setTransitionStyle({
@@ -54,6 +61,7 @@ const getMixEffectHandlers = (webSocketServer: MyWebSocketServer, lowerThirdsMan
     let lastMacroState: AtemState["macro"]["macroPlayer"];
     let isMacroRunning: boolean = false;
 
+    // gets initial state from atem
     const onAtemConnected = (atemConsole: Atem) => {
         console.log("Atem connected");
         lastChannelState = getChannelState(atemConsole.state);
@@ -61,30 +69,37 @@ const getMixEffectHandlers = (webSocketServer: MyWebSocketServer, lowerThirdsMan
         webSocketServer.broadcastWsMessage(lastChannelState);
     };
 
+    // handle keypresses
     const handleMixEffectKeyPresses = (atemConsole: Atem, eventType: AtemEvent, state: AtemState, paths: string[]) => {
+        // get channelstate changes
         paths.forEach(async path => {
             if (path.startsWith("video.ME.0")) {
+                // store new channelstate
                 const currentChannelState = getChannelState(state);
 
-                if (!equal(lastChannelState, currentChannelState)) {
+                if (!equal(lastChannelState, currentChannelState)) { // dont send unnecessary updates
                     if (
                         currentChannelState.preview.index !== config.lowerThirds.previewKeyIndex &&
                         currentChannelState.preview.index !== config.lowerThirds.nextKeyIndex
-                    ) {
+                    ) // dont send updates for macro keys
+                    {
+                        // send updates to ws clients
                         webSocketServer.broadcastWsMessage(currentChannelState);
                         webSocketServer.setChannelState(currentChannelState);
-                        lastChannelState = currentChannelState;
+                        lastChannelState = currentChannelState; // update last channelstate
                     }
                 }
             }
         });
+        // run macros
         paths.forEach(async path => {
             if (path.startsWith("video.ME.0")) {
                 const currentChannelState = getChannelState(state);
-
+                // again, dont run twice
                 if (!equal(lastChannelState, currentChannelState)) {
+                    // run macro
                     if (currentChannelState.preview.index === config.lowerThirds.previewKeyIndex) {
-                        await atemConsole.changePreviewInput(lastChannelState.preview.index);
+                        await atemConsole.changePreviewInput(lastChannelState.preview.index); // change back to old preview
                         await atemConsole.macroRun(0);
 
                         // if (!isMacroRunning) {
@@ -94,8 +109,9 @@ const getMixEffectHandlers = (webSocketServer: MyWebSocketServer, lowerThirdsMan
                         //     });
                         // }
                     }
+                    // set next lowerthirds
                     if (currentChannelState.preview.index === config.lowerThirds.nextKeyIndex) {
-                        await atemConsole.changePreviewInput(lastChannelState.preview.index);
+                        await atemConsole.changePreviewInput(lastChannelState.preview.index); // change back to old preview
                         lowerThirdsManager.nextLowerThirds();
                     }
                 }

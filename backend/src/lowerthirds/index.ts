@@ -14,15 +14,26 @@ import { TransferState } from "atem-connection/dist/enums";
 import { MyWebSocketServer } from "../wss";
 import { send } from "process";
 
+/**
+ * lowerthirds handles controlling and rendering lowerthird templates and then uploading them to ATEM
+ * templatefiles are HTML with handlebars
+ */ 
+
+
+// Render a single lowerthirdsimage by provided templatefile path and texts
 async function render(lowerThirdsOptions: LowerThirdsOption) {
+    // get template
     const templateHTML = fs.readFileSync(path.resolve(__dirname, lowerThirdsOptions.templateFile), {
         encoding: "utf-8",
     });
+    // insert texts & compile to pure HTML
     const template = Handlebars.compile(templateHTML);
     const compiled = template(lowerThirdsOptions.texts);
+
+    // get pngbuffer with puppeteer
     const pngBuffer = await takeScreenshot(compiled);
     if (pngBuffer === undefined) throw new Error("Invalid PNG buffer");
-    // convert to RGBA buffer
+    // convert to RGBA buffer magic
     const buf = await sharp(pngBuffer).ensureAlpha().raw().toBuffer();
     let outputBuf = Buffer.alloc(buf.length);
     for (let i = 0; i < buf.length; i += 4) {
@@ -43,6 +54,8 @@ async function render(lowerThirdsOptions: LowerThirdsOption) {
     return outputBuf;
 }
 
+
+// take screenshot of specified HTML with puppeteer
 async function takeScreenshot(html: string) {
     const browser = await puppeteer.launch({
         defaultViewport: {
@@ -57,6 +70,8 @@ async function takeScreenshot(html: string) {
     return buffer as Buffer;
 }
 
+
+// lowerthirdsmanager is called by other services, and provides hooks to atem
 class LowerThirdsManager {
     get lowerThirdsData(): LowerThirdsOption[] {
         return this._lowerThirdsData;
@@ -72,6 +87,7 @@ class LowerThirdsManager {
         this.atemConsole = atemConsole;
     }
 
+    // Handles media state changes and sends them over ws
     public sendMediaWS() {
         const index = this.getLowerThirdsIndex();
         const data = this.lowerThirdsData[index];
@@ -85,6 +101,7 @@ class LowerThirdsManager {
         this.webSocketServer.setMediaState(msg);
     }
 
+    // advances lowerthirds to next in the list
     public nextLowerThirds(): void {
         console.log("Next lower thirds");
         this.currentTextIndex = (this.currentTextIndex + 1) % this._lowerThirdsData.length;
@@ -92,6 +109,7 @@ class LowerThirdsManager {
         this.sendMediaWS();
     }
 
+    // sets lowerthirds based on list index
     public setLowerThirdsIndex(index: number): void {
         console.log(index);
         this.currentTextIndex = index % this._lowerThirdsData.length;
@@ -99,23 +117,30 @@ class LowerThirdsManager {
         this.sendMediaWS();
     }
 
+    // gets index of current lowerthirds
     public getLowerThirdsIndex(): number {
         return this.currentTextIndex;
     }
 
+    // get current lowerthirdsoptions
     public getCurrentLowerThirds(): LowerThirdsOption {
         return this._lowerThirdsData[this.currentTextIndex];
     }
 
+    // rerender & reupload lowerthirds
     public refresh(): void {
         this.prepareNextLowerThirds();
     }
 
+    // render & upload lowerthirds
     private prepareNextLowerThirds() {
         const lowerThirdsUploadedPromise = new Promise<void>(resolve => {
             const inner = async () => {
+                // get options
                 const lowerThirdsOptions = this._lowerThirdsData[this.currentTextIndex];
+                // render
                 const imageBuffer = await render(lowerThirdsOptions);
+                //upload to atem
                 const result = await this.atemConsole.uploadStill(config.lowerThirds.mediaIndex, imageBuffer, "Ota-atem image", "Ota-atem image");
                 console.log(result.state === TransferState.Finished);
             };
@@ -123,6 +148,7 @@ class LowerThirdsManager {
         });
     }
 
+    // set all lowerthirdsoptions by array
     public setLowerThirds(lowerThirdsData: LowerThirdsOption[]): void {
         console.log(this._lowerThirdsData);
         this._lowerThirdsData = lowerThirdsData;
@@ -130,10 +156,12 @@ class LowerThirdsManager {
         this.setLowerThirdsIndex(0);
     }
 
+    // add new lowerthirdsoption to list
     public addLowerThirds(item: LowerThirdsOption): void {
         this._lowerThirdsData.push(item);
     }
 
+    // remove a single lowerthirdsitem
     public removeLowerThirds(i: number): boolean {
         if (i > -1 && i < this._lowerThirdsData.length) {
             this._lowerThirdsData.splice(i, 1);
@@ -143,6 +171,7 @@ class LowerThirdsManager {
         }
     }
 
+    // set a single lowerthirdsitem
     public setLowerThirdsItem(i: number, item: LowerThirdsOption): boolean {
         if (i > -1 && i < this._lowerThirdsData.length) {
             this._lowerThirdsData[i] = item;
@@ -153,6 +182,7 @@ class LowerThirdsManager {
     }
 }
 
+// lowerthirdshandlers to atem
 const getLowerThirdsHandlers = (webSocketServer: MyWebSocketServer, lowerThirdsManager: LowerThirdsManager): AtemEventHandlers => {
     lowerThirdsManager.webSocketServer = webSocketServer;
     return {
